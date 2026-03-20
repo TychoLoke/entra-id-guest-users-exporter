@@ -18,12 +18,12 @@
 
 .NOTES
     Version:        1.0.0
-    Author:         Your Name (Your GitHub Profile URL)
-    GitHub Repo:    (Link to your repository)
+    Author:         Tycho Löke
+    GitHub Repo:    https://github.com/TychoLoke/entra-id-guest-users-exporter
 
 .REQUIREMENTS
     - Microsoft Graph PowerShell module (`Microsoft.Graph.Users`).
-    - Admin permissions in Azure AD (`User.Read.All` scope).
+    - Microsoft Graph delegated permissions for `User.Read.All` and `AuditLog.Read.All`.
     - Internet access.
 
 #>
@@ -77,7 +77,7 @@ Import-Module Microsoft.Graph.Users
 # Connect to Microsoft Graph
 Write-Log "Connecting to Microsoft Graph API..."
 try {
-    Connect-MgGraph -Scopes "User.Read.All" -ErrorAction Stop
+    Connect-MgGraph -Scopes "User.Read.All", "AuditLog.Read.All" -ErrorAction Stop
     Write-Log "Connected successfully to Microsoft Graph."
 } catch {
     Write-Host "ERROR: Failed to connect to Microsoft Graph. Ensure you have the correct permissions." -ForegroundColor Red

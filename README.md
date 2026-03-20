@@ -22,7 +22,7 @@ The results are saved to a **CSV file**, making it easy to analyze guest user ac
 Before running the script, ensure you meet the following requirements:  
 
 - **Microsoft Entra ID (formerly Azure AD)** – Your account must be linked to an Entra ID tenant.  
-- **Admin Role** – Requires **User.Read.All** or higher permissions in Entra ID.  
+- **Microsoft Graph Permissions** – Requires `User.Read.All` and `AuditLog.Read.All` to export guest accounts and sign-in activity.
 - **Microsoft Graph PowerShell Module** – Installed automatically by the script if missing.  
 - **PowerShell Execution Policy** – Must allow script execution (`Set-ExecutionPolicy RemoteSigned`).  
 
@@ -49,12 +49,12 @@ Run the script using:
 ```
 
 ### **4️⃣ Authenticate with Microsoft Graph**  
-- A **pop-up login window** will appear.  
-- Sign in with your **Global Admin** or **User Administrator** credentials.
+- An interactive Microsoft Graph sign-in prompt will appear.
+- Sign in with an account that can grant or use the required delegated scopes.
 
 ### **5️⃣ What Happens Next?**  
 ✅ The script **checks for required modules** and installs them if missing.  
-✅ It **connects to Microsoft Graph** via pop-up login.  
+✅ It **connects to Microsoft Graph** with interactive delegated authentication.
 ✅ Retrieves **all guest users** and gathers detailed account and login data.  
 ✅ Saves the report to the user-selected file path (e.g., `C:\Temp\GuestUsers.csv`).  
 
@@ -77,7 +77,7 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 ```
 
 ### ❌ Script Fails to Authenticate?  
-Verify your account has **Global Admin** or **User Administrator** privileges.  
+Verify that your account can use the `User.Read.All` and `AuditLog.Read.All` Microsoft Graph scopes.
 
 ### ❌ Script Hangs or Freezes?  
 If processing thousands of guest users, allow the script time to complete. Progress is displayed in the PowerShell window.  
