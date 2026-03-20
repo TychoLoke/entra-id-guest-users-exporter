@@ -35,7 +35,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Initialize-PowerShellAdminHelpers {
+function Initialize-PowerShellAdminHelper {
     $moduleName = "PowerShellAdminHelpers"
 
     if (-not (Get-Module -ListAvailable -Name $moduleName)) {
@@ -47,34 +47,34 @@ function Initialize-PowerShellAdminHelpers {
     Import-Module -Name $moduleName -Force -ErrorAction Stop
 }
 
-function Write-Log {
+function Write-GuestUserExportLog {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Host "[$timestamp] $Message" -ForegroundColor Cyan
+    Write-Information "[$timestamp] $Message" -InformationAction Continue
 }
 
-Write-Log "Starting Guest User Export Script..."
-Initialize-PowerShellAdminHelpers
+Write-GuestUserExportLog "Starting Guest User Export Script..."
+Initialize-PowerShellAdminHelper
 Ensure-OutputDirectory -Path (Split-Path -Path $OutputPath -Parent)
-Write-Log "File will be saved as: $OutputPath"
+Write-GuestUserExportLog "File will be saved as: $OutputPath"
 Ensure-Module -ModuleName Microsoft.Graph.Users
 
-Write-Log "Connecting to Microsoft Graph API..."
+Write-GuestUserExportLog "Connecting to Microsoft Graph API..."
 try {
     Connect-GraphWithScopes -Scopes @("User.Read.All", "AuditLog.Read.All")
-    Write-Log "Connected successfully to Microsoft Graph."
+    Write-GuestUserExportLog "Connected successfully to Microsoft Graph."
 } catch {
-    Write-Host "ERROR: Failed to connect to Microsoft Graph. Ensure you have the correct permissions." -ForegroundColor Red
+    Write-Error "Failed to connect to Microsoft Graph. Ensure you have the correct permissions."
     exit
 }
 
 # Fetch all guest users with additional properties
-Write-Log "Retrieving guest users from Microsoft Entra ID (Azure AD)..."
+Write-GuestUserExportLog "Retrieving guest users from Microsoft Entra ID (Azure AD)..."
 try {
     $guestUsers = Get-MgUser -Filter "userType eq 'Guest'" -Property Id, DisplayName, Mail, SignInActivity, CreatedDateTime -All
-    Write-Log "Retrieved $($guestUsers.Count) guest users."
+    Write-GuestUserExportLog "Retrieved $($guestUsers.Count) guest users."
 } catch {
-    Write-Host "ERROR: Failed to retrieve guest users. Ensure you have the necessary permissions." -ForegroundColor Red
+    Write-Error "Failed to retrieve guest users. Ensure you have the necessary permissions."
     exit
 }
 
@@ -84,7 +84,7 @@ $results = @()
 # Get the current date for calculation
 $today = Get-Date
 
-Write-Log "Processing users and cleaning data..."
+Write-GuestUserExportLog "Processing users and cleaning data..."
 foreach ($user in $guestUsers) {
     $displayName = if ($user.DisplayName) {
         $user.DisplayName.Trim() -replace "\s+", " "
@@ -126,17 +126,17 @@ foreach ($user in $guestUsers) {
 }
 
 # Export results to CSV
-Write-Log "Exporting data to CSV file..."
+Write-GuestUserExportLog "Exporting data to CSV file..."
 try {
     $results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
-    Write-Log "Export completed successfully! File saved as: $OutputPath"
+    Write-GuestUserExportLog "Export completed successfully! File saved as: $OutputPath"
 } catch {
-    Write-Host "ERROR: Failed to save the CSV file. Check file permissions." -ForegroundColor Red
+    Write-Error "Failed to save the CSV file. Check file permissions."
 }
 
 # Disconnect from Microsoft Graph
-Write-Log "Disconnecting from Microsoft Graph API..."
+Write-GuestUserExportLog "Disconnecting from Microsoft Graph API..."
 if (Get-MgContext) {
     Disconnect-MgGraph
 }
-Write-Log "Script completed!"
+Write-GuestUserExportLog "Script completed!"
