@@ -13,8 +13,8 @@
     - Days since last login
     The results are exported to a user-specified CSV file.
 
-.PARAMETER None
-    No additional parameters are required. The script will prompt for the file save location.
+.PARAMETER OutputPath
+    The full file path where the CSV report will be saved.
 
 .NOTES
     Version:        1.0.0
@@ -28,56 +28,40 @@
 
 #>
 
-# Ensure the script stops on errors
+[CmdletBinding()]
+param(
+    [string]$OutputPath = (Join-Path -Path $PSScriptRoot -ChildPath "GuestUsers_LastSignIn.csv")
+)
+
 $ErrorActionPreference = "Stop"
 
-# Function to display messages with timestamps
+function Initialize-PowerShellAdminHelpers {
+    $moduleName = "PowerShellAdminHelpers"
+
+    if (-not (Get-Module -ListAvailable -Name $moduleName)) {
+        $installerPath = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "Install-PowerShellAdminHelpers.ps1"
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/TychoLoke/powershell-admin-helpers/main/Install-PowerShellAdminHelpers.ps1" -OutFile $installerPath
+        & $installerPath
+    }
+
+    Import-Module -Name $moduleName -Force -ErrorAction Stop
+}
+
 function Write-Log {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Write-Host "[$timestamp] $Message" -ForegroundColor Cyan
 }
 
-# Function to escape fields with special characters (e.g., commas)
-function Escape-CsvField {
-    param([string]$FieldValue)
-    if ($FieldValue -and $FieldValue.Contains(",")) {
-        return "`"$FieldValue`""  # Wrap the field in double quotes
-    } else {
-        return $FieldValue
-    }
-}
-
 Write-Log "Starting Guest User Export Script..."
+Initialize-PowerShellAdminHelpers
+Ensure-OutputDirectory -Path (Split-Path -Path $OutputPath -Parent)
+Write-Log "File will be saved as: $OutputPath"
+Ensure-Module -ModuleName Microsoft.Graph.Users
 
-# Prompt user to select a save location for the CSV file
-Write-Log "Please choose where to save the export file..."
-$FileBrowser = New-Object -ComObject Shell.Application
-$Folder = $FileBrowser.BrowseForFolder(0, "Select Folder to Save CSV File", 0)
-
-if ($Folder) {
-    $outputFolder = $Folder.Self.Path
-    $outputFile = "$outputFolder\GuestUsers_LastSignIn.csv"
-} else {
-    Write-Host "No folder selected. Using default script directory." -ForegroundColor Yellow
-    $outputFile = "$PSScriptRoot\GuestUsers_LastSignIn.csv"
-}
-
-Write-Log "File will be saved as: $outputFile"
-
-# Check if Microsoft Graph Users module is installed
-if (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Users)) {
-    Write-Log "Microsoft Graph module not found. Installing now..."
-    Install-Module Microsoft.Graph -Scope CurrentUser -Force
-}
-
-# Import only required Microsoft Graph submodule
-Import-Module Microsoft.Graph.Users
-
-# Connect to Microsoft Graph
 Write-Log "Connecting to Microsoft Graph API..."
 try {
-    Connect-MgGraph -Scopes "User.Read.All", "AuditLog.Read.All" -ErrorAction Stop
+    Connect-GraphWithScopes -Scopes @("User.Read.All", "AuditLog.Read.All")
     Write-Log "Connected successfully to Microsoft Graph."
 } catch {
     Write-Host "ERROR: Failed to connect to Microsoft Graph. Ensure you have the correct permissions." -ForegroundColor Red
@@ -102,15 +86,14 @@ $today = Get-Date
 
 Write-Log "Processing users and cleaning data..."
 foreach ($user in $guestUsers) {
-    # Extract and clean data
     $displayName = if ($user.DisplayName) {
-        Escape-CsvField($user.DisplayName.Trim() -replace "\s+", " ")  # Normalize spaces and wrap if needed
+        $user.DisplayName.Trim() -replace "\s+", " "
     } else {
         "Unknown Name"
     }
 
     $email = if ($user.Mail) {
-        Escape-CsvField($user.Mail.Trim())  # Wrap email if it contains commas
+        $user.Mail.Trim()
     } else {
         "No Email Provided"
     }
@@ -145,13 +128,15 @@ foreach ($user in $guestUsers) {
 # Export results to CSV
 Write-Log "Exporting data to CSV file..."
 try {
-    $results | Export-Csv -Path $outputFile -NoTypeInformation
-    Write-Log "Export completed successfully! File saved as: $outputFile"
+    $results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
+    Write-Log "Export completed successfully! File saved as: $OutputPath"
 } catch {
     Write-Host "ERROR: Failed to save the CSV file. Check file permissions." -ForegroundColor Red
 }
 
 # Disconnect from Microsoft Graph
 Write-Log "Disconnecting from Microsoft Graph API..."
-Disconnect-MgGraph
+if (Get-MgContext) {
+    Disconnect-MgGraph
+}
 Write-Log "Script completed!"
