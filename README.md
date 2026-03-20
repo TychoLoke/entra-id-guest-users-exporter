@@ -1,5 +1,9 @@
 # Entra ID Guest Users Exporter
 
+[![Release](https://img.shields.io/github/v/release/TychoLoke/entra-id-guest-users-exporter)](https://github.com/TychoLoke/entra-id-guest-users-exporter/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/TychoLoke/entra-id-guest-users-exporter/powershell-ci.yml?branch=main)](https://github.com/TychoLoke/entra-id-guest-users-exporter/actions/workflows/powershell-ci.yml)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 This PowerShell script exports guest-user account and sign-in data from Microsoft Entra ID to CSV.
 
 ## What It Does
